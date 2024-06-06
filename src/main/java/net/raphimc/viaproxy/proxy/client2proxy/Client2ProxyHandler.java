@@ -199,7 +199,7 @@ public class Client2ProxyHandler extends SimpleChannelInboundHandler<IPacket> {
                 this.connect(finalServerAddress, detectedVersion, clientVersion, packet.intendedState, finalClientHandshakeAddress, userOptions, handshakeParts);
             }).exceptionally(t -> {
                 if (t instanceof ConnectException || t instanceof UnresolvedAddressException) {
-                    this.proxyConnection.kickClient("§cCould not connect to the backend server!");
+                    this.proxyConnection.kickClient("§c边缘代理层工作正常，后端主节点离线，请联系管理人员!");
                 } else {
                     this.proxyConnection.kickClient("§cAutomatic protocol detection failed!\n§c" + t.getMessage());
                 }
@@ -285,7 +285,7 @@ public class Client2ProxyHandler extends SimpleChannelInboundHandler<IPacket> {
         }, (ThrowingChannelFutureListener) f -> {
             if (!f.isSuccess()) {
                 if (f.cause() instanceof ConnectException || f.cause() instanceof UnresolvedAddressException) {
-                    this.proxyConnection.kickClient("§cCould not connect to the backend server!");
+                    this.proxyConnection.kickClient("§c边缘代理层工作正常，后端主节点离线，请联系管理人员!");
                 } else {
                     Logger.LOGGER.error("Error while connecting to the backend server", f.cause());
                     this.proxyConnection.kickClient("§cAn error occurred while connecting to the backend server: " + f.cause().getMessage() + "\n§cCheck the console for more information.");
