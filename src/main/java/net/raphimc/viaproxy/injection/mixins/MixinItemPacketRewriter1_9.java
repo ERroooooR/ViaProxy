@@ -21,12 +21,17 @@ package net.raphimc.viaproxy.injection.mixins;
 import com.viaversion.nbt.tag.CompoundTag;
 import com.viaversion.nbt.tag.ListTag;
 import com.viaversion.viaversion.api.minecraft.item.Item;
-import com.viaversion.viaversion.api.minecraft.item.data.ModifierData;
+import com.viaversion.viaversion.api.minecraft.item.data.AttributeModifiers1_20_5;
+import com.viaversion.viaversion.api.type.Type;
 import com.viaversion.viaversion.libs.fastutil.ints.Int2ObjectMap;
 import com.viaversion.viaversion.libs.fastutil.ints.Int2ObjectOpenHashMap;
 import com.viaversion.viaversion.libs.gson.JsonElement;
 import com.viaversion.viaversion.libs.gson.JsonObject;
+import com.viaversion.viaversion.protocols.v1_8to1_9.Protocol1_8To1_9;
+import com.viaversion.viaversion.protocols.v1_8to1_9.packet.ClientboundPackets1_8;
+import com.viaversion.viaversion.protocols.v1_8to1_9.packet.ServerboundPackets1_9;
 import com.viaversion.viaversion.protocols.v1_8to1_9.rewriter.ItemPacketRewriter1_9;
+import com.viaversion.viaversion.rewriter.ItemRewriter;
 import com.viaversion.viaversion.util.Pair;
 import net.raphimc.viaproxy.protocoltranslator.impl.ViaProxyMappingDataLoader;
 import org.spongepowered.asm.mixin.Mixin;
@@ -41,16 +46,17 @@ import java.util.Map;
 import java.util.UUID;
 
 @Mixin(value = ItemPacketRewriter1_9.class, remap = false)
-public abstract class MixinItemPacketRewriter1_9 {
+public abstract class MixinItemPacketRewriter1_9 extends ItemRewriter<ClientboundPackets1_8, ServerboundPackets1_9, Protocol1_8To1_9> {
 
     @Unique
     private final Int2ObjectMap<String> itemIdentifiers = new Int2ObjectOpenHashMap<>();
 
     @Unique
-    private final Map<String, Map<String, Pair<String, ModifierData>>> itemAttributes = new HashMap<>();
+    private final Map<String, Map<String, Pair<String, AttributeModifiers1_20_5.ModifierData>>> itemAttributes = new HashMap<>();
 
-    @Unique
-    private final String attributeFixTagName = "VV|AttributeFix";
+    public MixinItemPacketRewriter1_9(Protocol1_8To1_9 protocol, Type<Item> itemType, Type<Item[]> itemArrayType, Type<Item> mappedItemType, Type<Item[]> mappedItemArrayType) {
+        super(protocol, itemType, itemArrayType, mappedItemType, mappedItemArrayType);
+    }
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void loadAdditionalData(CallbackInfo ci) {
@@ -62,11 +68,11 @@ public abstract class MixinItemPacketRewriter1_9 {
         final JsonObject itemAttributes = ViaProxyMappingDataLoader.INSTANCE.loadData("item-attributes-1.8.json");
         for (Map.Entry<String, JsonElement> itemEntry : itemAttributes.entrySet()) {
             final String itemIdentifier = itemEntry.getKey();
-            final Map<String, Pair<String, ModifierData>> attributes = new HashMap<>();
+            final Map<String, Pair<String, AttributeModifiers1_20_5.ModifierData>> attributes = new HashMap<>();
             for (Map.Entry<String, JsonElement> attributeEntry : itemEntry.getValue().getAsJsonObject().entrySet()) {
                 final String attribute = attributeEntry.getKey();
                 final JsonObject attributeData = attributeEntry.getValue().getAsJsonObject();
-                final ModifierData modifierData = new ModifierData(UUID.fromString(attributeData.get("id").getAsString()), attributeData.get("name").getAsString(), attributeData.get("amount").getAsDouble(), attributeData.get("operation").getAsInt());
+                final AttributeModifiers1_20_5.ModifierData modifierData = new AttributeModifiers1_20_5.ModifierData(UUID.fromString(attributeData.get("id").getAsString()), attributeData.get("name").getAsString(), attributeData.get("amount").getAsDouble(), attributeData.get("operation").getAsInt());
                 final String slot = attributeData.get("slot").getAsString();
                 attributes.put(attribute, new Pair<>(slot, modifierData));
             }
@@ -81,7 +87,7 @@ public abstract class MixinItemPacketRewriter1_9 {
 
         final String identifier = this.itemIdentifiers.get(item.identifier());
         if (identifier != null && this.itemAttributes.containsKey(identifier)) {
-            final Map<String, Pair<String, ModifierData>> attributes = this.itemAttributes.get(identifier);
+            final Map<String, Pair<String, AttributeModifiers1_20_5.ModifierData>> attributes = this.itemAttributes.get(identifier);
             final CompoundTag attributeFixTag = new CompoundTag();
             CompoundTag tag = item.tag();
             if (tag == null) {
@@ -89,12 +95,12 @@ public abstract class MixinItemPacketRewriter1_9 {
                 item.setTag(tag);
                 attributeFixTag.putBoolean("RemoveTag", true);
             }
-            tag.put(this.attributeFixTagName, attributeFixTag);
+            tag.put(nbtTagName("attributeFix"), attributeFixTag);
 
             ListTag<CompoundTag> attributeModifiers = tag.getListTag("AttributeModifiers", CompoundTag.class);
             if (attributeModifiers == null) {
                 attributeModifiers = new ListTag<>(CompoundTag.class);
-                for (Map.Entry<String, Pair<String, ModifierData>> entry : attributes.entrySet()) {
+                for (Map.Entry<String, Pair<String, AttributeModifiers1_20_5.ModifierData>> entry : attributes.entrySet()) {
                     final CompoundTag attributeModifier = new CompoundTag();
                     attributeModifier.putString("AttributeName", entry.getKey());
                     attributeModifier.putString("Name", entry.getValue().value().name());
@@ -117,7 +123,7 @@ public abstract class MixinItemPacketRewriter1_9 {
         if (item == null) return;
         final CompoundTag tag = item.tag();
         if (tag == null) return;
-        final CompoundTag attributeFixTag = tag.removeUnchecked(attributeFixTagName);
+        final CompoundTag attributeFixTag = tag.removeUnchecked(nbtTagName("attributeFix"));
         if (attributeFixTag == null) return;
 
         if (attributeFixTag.contains("RemoveAttributeModifiers")) {

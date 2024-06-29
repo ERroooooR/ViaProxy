@@ -130,7 +130,7 @@ public abstract class MixinBlockItemPacketRewriter1_20_5 extends ItemRewriter<Cl
 
     @Inject(method = "toStructuredItem", at = @At("RETURN"))
     private void appendItemDataFixComponents(UserConnection user, Item old, CallbackInfoReturnable<Item> cir) {
-        final StructuredDataContainer data = cir.getReturnValue().structuredData();
+        final StructuredDataContainer data = cir.getReturnValue().dataContainer();
         final String identifier = this.protocol.getMappingData().getFullItemMappings().identifier(cir.getReturnValue().identifier());
         if (user.getProtocolInfo().serverProtocolVersion().olderThanOrEqualTo(ProtocolVersion.v1_17_1)) {
             if (identifier.equals("minecraft:crossbow")) {
@@ -139,7 +139,7 @@ public abstract class MixinBlockItemPacketRewriter1_20_5 extends ItemRewriter<Cl
         }
         if (user.getProtocolInfo().serverProtocolVersion().betweenInclusive(LegacyProtocolVersion.b1_8tob1_8_1, ProtocolVersion.v1_8)) {
             if (this.swordItems1_8.contains(identifier)) {
-                data.set(StructuredDataKey.FOOD, new FoodProperties(0, 0F, true, 3600, new FoodEffect[0]));
+                data.set(StructuredDataKey.FOOD1_20_5, new FoodProperties(0, 0F, true, 3600, null, new FoodEffect[0]));
             }
         }
         if (user.getProtocolInfo().serverProtocolVersion().olderThanOrEqualTo(LegacyProtocolVersion.b1_8tob1_8_1)) {
@@ -150,7 +150,7 @@ public abstract class MixinBlockItemPacketRewriter1_20_5 extends ItemRewriter<Cl
         if (user.getProtocolInfo().serverProtocolVersion().olderThanOrEqualTo(LegacyProtocolVersion.b1_7tob1_7_3)) {
             if (this.foodItems_b1_7_3.contains(identifier)) {
                 data.set(StructuredDataKey.MAX_STACK_SIZE, 1);
-                data.addEmpty(StructuredDataKey.FOOD);
+                data.addEmpty(StructuredDataKey.FOOD1_20_5);
             }
         }
 

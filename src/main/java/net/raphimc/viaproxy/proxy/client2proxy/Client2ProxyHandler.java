@@ -124,7 +124,12 @@ public class Client2ProxyHandler extends SimpleChannelInboundHandler<IPacket> {
             this.proxyConnection.kickClient("§cYour client version is not supported by ViaProxy!");
         }
 
-        final String[] handshakeParts = packet.address.split("\0");
+        final String[] handshakeParts;
+        if (ViaProxy.getConfig().shouldPassthroughBungeecordPlayerInfo()) {
+            handshakeParts = packet.address.split("\0");
+        } else {
+            handshakeParts = new String[]{packet.address};
+        }
 
         SocketAddress serverAddress = ViaProxy.getConfig().getTargetAddress();
         ProtocolVersion serverVersion = ViaProxy.getConfig().getTargetVersion();
@@ -228,6 +233,9 @@ public class Client2ProxyHandler extends SimpleChannelInboundHandler<IPacket> {
         this.proxyConnection.getPacketHandlers().add(new OpenAuthModPacketHandler(this.proxyConnection));
         if (ViaProxy.getConfig().shouldSupportSimpleVoiceChat() && serverVersion.newerThan(ProtocolVersion.v1_14) && clientVersion.newerThan(ProtocolVersion.v1_14)) {
             this.proxyConnection.getPacketHandlers().add(new SimpleVoiceChatPacketHandler(this.proxyConnection));
+        }
+        if (ViaProxy.getConfig().shouldFakeAcceptResourcePacks() && serverVersion.newerThanOrEqualTo(LegacyProtocolVersion.r1_3_1tor1_3_2)) {
+            this.proxyConnection.getPacketHandlers().add(new ResourcePackSpooferPacketHandler(this.proxyConnection));
         }
         if (clientVersion.newerThanOrEqualTo(ProtocolVersion.v1_8)) {
             this.proxyConnection.getPacketHandlers().add(new BrandCustomPayloadPacketHandler(this.proxyConnection));
