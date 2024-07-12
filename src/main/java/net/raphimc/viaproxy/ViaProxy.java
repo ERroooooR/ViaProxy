@@ -117,6 +117,9 @@ public class ViaProxy {
         final boolean useCLI = args.length > 0 && args[0].equals("cli");
 
         final List<File> potentialCwds = new ArrayList<>();
+        if (System.getenv("VP_RUN_DIR") != null) {
+            potentialCwds.add(new File(System.getenv("VP_RUN_DIR")));
+        }
         potentialCwds.add(new File(System.getProperty("user.dir")));
         potentialCwds.add(new File("."));
         JarUtil.getJarFile().map(File::getParentFile).ifPresent(potentialCwds::add);
@@ -137,7 +140,12 @@ public class ViaProxy {
             JOptionPane.showMessageDialog(null, "Could not find a suitable directory to use as working directory. Make sure that the current folder is writeable.", "ViaProxy", JOptionPane.ERROR_MESSAGE);
             System.exit(1);
         } else {
-            throw new IllegalStateException("Could not find a suitable directory to use as working directory. Make sure that the current folder is writeable.");
+            System.err.println("Could not find a suitable directory to use as working directory. Make sure that the current folder is writeable.");
+            System.err.println("Attempted to use the following directories:");
+            for (File failedCwd : failedCwds) {
+                System.err.println("\t- " + failedCwd.getAbsolutePath());
+            }
+            System.exit(1);
         }
 
         Logger.setup();
